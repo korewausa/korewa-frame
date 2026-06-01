@@ -1,6 +1,7 @@
 export type AspectRatio = "1:1" | "4:5" | "16:9" | "9:16";
 export type FontChoice = "sans" | "serif" | "mono";
 export type InfoLayout = "template" | "below" | "inside-left" | "inside-right" | "clean";
+export type InfoKey = keyof PhotoMeta;
 
 export type PhotoMeta = {
   camera: string;
@@ -45,4 +46,6 @@ export type FrameSettings = {
   margin: number;
   ratio: AspectRatio;
   infoLayout: InfoLayout;
+  visibleInfo: InfoKey[];
+  infoOrder: InfoKey[];
 };

@@ -1,17 +1,22 @@
-import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Check, ChevronDown, Download, ImagePlus, LockKeyhole, SlidersHorizontal, Upload, X } from "lucide-react";
 import { downloadFrame, drawFrame } from "./canvas";
 import { emptyMeta, readExif } from "./exif";
 import { categories, templates } from "./templates";
-import type { AspectRatio, FontChoice, FrameSettings, InfoLayout, PhotoMeta, Template } from "./types";
+import type { AspectRatio, FontChoice, FrameSettings, InfoKey, InfoLayout, PhotoMeta, Template } from "./types";
 
 const DEFAULT_TEMPLATE = templates[0];
 const ratios: AspectRatio[] = ["1:1", "4:5", "16:9", "9:16"];
+const defaultInfoOrder: InfoKey[] = ["camera", "lens", "aperture", "shutter", "iso", "focalLength", "date", "location"];
+const PROFILE_KEY = "korewa-frame-profiles";
+type SavedProfile = { name: string; settings: FrameSettings };
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const markInputRef = useRef<HTMLInputElement>(null);
+  const markImageRef = useRef<HTMLImageElement | null>(null);
   const [photoUrl, setPhotoUrl] = useState("");
   const [fileName, setFileName] = useState("");
   const [meta, setMeta] = useState<PhotoMeta>(emptyMeta());
@@ -20,6 +25,10 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [showAdjustments, setShowAdjustments] = useState(false);
   const [showInfoEditor, setShowInfoEditor] = useState(false);
+  const [markName, setMarkName] = useState("");
+  const [profiles, setProfiles] = useState<SavedProfile[]>(() => {
+    try { return JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "[]") as SavedProfile[]; } catch { return []; }
+  });
   const [settings, setSettings] = useState<FrameSettings>({
     background: DEFAULT_TEMPLATE.background,
     foreground: DEFAULT_TEMPLATE.foreground,
@@ -27,6 +36,8 @@ export default function App() {
     margin: DEFAULT_TEMPLATE.margin,
     ratio: "4:5",
     infoLayout: "template",
+    visibleInfo: [...defaultInfoOrder],
+    infoOrder: [...defaultInfoOrder],
   });
 
   const filteredTemplates = useMemo(
@@ -37,8 +48,8 @@ export default function App() {
   useEffect(() => {
     const canvas = canvasRef.current;
     const image = imageRef.current;
-    if (canvas && image) drawFrame(canvas, image, meta, selected, settings);
-  }, [meta, selected, settings, photoUrl]);
+    if (canvas && image) drawFrame(canvas, image, meta, selected, settings, markImageRef.current);
+  }, [meta, selected, settings, photoUrl, markName]);
 
   async function loadFile(file?: File) {
     if (!file || !file.type.startsWith("image/")) return;
@@ -77,6 +88,35 @@ export default function App() {
     setPhotoUrl("");
     setFileName("");
     setMeta(emptyMeta());
+  }
+
+  function loadMark(file?: File) {
+    if (!file || !file.type.startsWith("image/")) return;
+    const image = new Image();
+    image.onload = () => {
+      markImageRef.current = image;
+      setMarkName(file.name);
+    };
+    image.src = URL.createObjectURL(file);
+  }
+
+  function clearMark() {
+    markImageRef.current = null;
+    setMarkName("");
+  }
+
+  function saveProfile() {
+    const name = window.prompt("設定名を入力してください", `My Frame ${profiles.length + 1}`)?.trim();
+    if (!name) return;
+    const next = [...profiles.filter((profile) => profile.name !== name), { name, settings }];
+    setProfiles(next);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+  }
+
+  function deleteProfile(name: string) {
+    const next = profiles.filter((profile) => profile.name !== name);
+    setProfiles(next);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
   }
 
   return (
@@ -157,14 +197,14 @@ export default function App() {
               <button className="adjustments-toggle" onClick={() => setShowAdjustments(!showAdjustments)}>
                 <span><SlidersHorizontal size={16} /> 微調整</span><ChevronDown size={16} className={showAdjustments ? "opened" : ""} />
               </button>
-              {showAdjustments && <Adjustments settings={settings} onChange={setSettings} />}
+              {showAdjustments && <Adjustments settings={settings} onChange={setSettings} markName={markName} markInputRef={markInputRef} onLoadMark={loadMark} onClearMark={clearMark} profiles={profiles} onSaveProfile={saveProfile} onDeleteProfile={deleteProfile} />}
             </section>
 
             <section className="control-section compact">
               <button className="adjustments-toggle" onClick={() => setShowInfoEditor(!showInfoEditor)}>
                 <span><SlidersHorizontal size={16} /> 撮影情報を編集</span><ChevronDown size={16} className={showInfoEditor ? "opened" : ""} />
               </button>
-              {showInfoEditor && <InfoEditor meta={meta} onChange={setMeta} />}
+              {showInfoEditor && <InfoEditor meta={meta} onChange={setMeta} settings={settings} onSettingsChange={setSettings} />}
             </section>
 
             <section className="control-section export-section">
@@ -186,7 +226,7 @@ export default function App() {
   );
 }
 
-function Adjustments({ settings, onChange }: { settings: FrameSettings; onChange: (settings: FrameSettings) => void }) {
+function Adjustments({ settings, onChange, markName, markInputRef, onLoadMark, onClearMark, profiles, onSaveProfile, onDeleteProfile }: { settings: FrameSettings; onChange: (settings: FrameSettings) => void; markName: string; markInputRef: RefObject<HTMLInputElement>; onLoadMark: (file?: File) => void; onClearMark: () => void; profiles: SavedProfile[]; onSaveProfile: () => void; onDeleteProfile: (name: string) => void }) {
   return (
     <div className="adjustments">
       <label>背景色<input type="color" value={settings.background} onChange={(event) => onChange({ ...settings, background: event.target.value })} /></label>
@@ -194,11 +234,21 @@ function Adjustments({ settings, onChange }: { settings: FrameSettings; onChange
       <label>フォント<select value={settings.font} onChange={(event) => onChange({ ...settings, font: event.target.value as FontChoice })}><option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option></select></label>
       <label className="wide-label">情報レイアウト<select value={settings.infoLayout} onChange={(event) => onChange({ ...settings, infoLayout: event.target.value as InfoLayout })}><option value="template">テンプレートに合わせる</option><option value="below">下部に整列</option><option value="inside-left">写真内・左下</option><option value="inside-right">写真内・右下</option><option value="clean">情報を隠す</option></select></label>
       <label className="range-label">余白 <b>{settings.margin}%</b><input type="range" min="4" max="18" value={settings.margin} onChange={(event) => onChange({ ...settings, margin: Number(event.target.value) })} /></label>
+      <div className="wide-label mark-control">
+        <span>オリジナル印</span>
+        <input ref={markInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => onLoadMark(event.target.files?.[0])} />
+        <button onClick={() => markInputRef.current?.click()}>{markName || "画像を選ぶ"}</button>
+        {markName && <button onClick={onClearMark}>外す</button>}
+      </div>
+      <div className="wide-label profile-control">
+        <button onClick={onSaveProfile}>現在の設定を保存</button>
+        {profiles.map((profile) => <span key={profile.name}><button onClick={() => onChange(profile.settings)}>{profile.name}</button><button onClick={() => onDeleteProfile(profile.name)}>×</button></span>)}
+      </div>
     </div>
   );
 }
 
-function InfoEditor({ meta, onChange }: { meta: PhotoMeta; onChange: (meta: PhotoMeta) => void }) {
+function InfoEditor({ meta, onChange, settings, onSettingsChange }: { meta: PhotoMeta; onChange: (meta: PhotoMeta) => void; settings: FrameSettings; onSettingsChange: (settings: FrameSettings) => void }) {
   const fields: { key: keyof PhotoMeta; label: string; placeholder: string }[] = [
     { key: "camera", label: "カメラ", placeholder: "RICOH GR III" },
     { key: "lens", label: "レンズ", placeholder: "GR LENS" },
@@ -210,15 +260,32 @@ function InfoEditor({ meta, onChange }: { meta: PhotoMeta; onChange: (meta: Phot
     { key: "location", label: "場所", placeholder: "Tokyo" },
   ];
 
+  function toggle(key: InfoKey) {
+    const visibleInfo = settings.visibleInfo.includes(key) ? settings.visibleInfo.filter((item) => item !== key) : [...settings.visibleInfo, key];
+    onSettingsChange({ ...settings, visibleInfo });
+  }
+
+  function move(key: InfoKey, offset: number) {
+    const current = settings.infoOrder.indexOf(key);
+    const target = current + offset;
+    if (target < 0 || target >= settings.infoOrder.length) return;
+    const infoOrder = [...settings.infoOrder];
+    [infoOrder[current], infoOrder[target]] = [infoOrder[target], infoOrder[current]];
+    onSettingsChange({ ...settings, infoOrder });
+  }
+
   return (
     <div className="info-editor">
       <p>EXIFで読み込んだ内容を、書き出し前に自由に直せます。</p>
       <div className="info-fields">
-        {fields.map((field) => (
-          <label key={field.key}>{field.label}
+        {settings.infoOrder.map((key) => {
+          const field = fields.find((item) => item.key === key)!;
+          return <div className="info-field" key={field.key}>
+            <label><input type="checkbox" checked={settings.visibleInfo.includes(field.key)} onChange={() => toggle(field.key)} /> {field.label}</label>
             <input value={meta[field.key]} placeholder={field.placeholder} onChange={(event) => onChange({ ...meta, [field.key]: event.target.value })} />
-          </label>
-        ))}
+            <span><button onClick={() => move(field.key, -1)}>↑</button><button onClick={() => move(field.key, 1)}>↓</button></span>
+          </div>;
+        })}
       </div>
     </div>
   );

@@ -42,10 +42,33 @@ function cameraMark(camera: string) {
   return camera.toUpperCase();
 }
 
-function details(meta: PhotoMeta) {
-  return [meta.camera, meta.lens, `F${meta.aperture}`, meta.shutter, `ISO ${meta.iso}`, meta.focalLength, meta.location]
+function details(meta: PhotoMeta, settings: FrameSettings) {
+  const values = {
+    camera: meta.camera,
+    lens: meta.lens,
+    aperture: `F${meta.aperture}`,
+    shutter: meta.shutter,
+    iso: `ISO ${meta.iso}`,
+    focalLength: meta.focalLength,
+    date: meta.date,
+    location: meta.location,
+  };
+  return settings.infoOrder
+    .filter((key) => settings.visibleInfo.includes(key))
+    .map((key) => values[key])
     .filter((item) => !item.includes("\u2014"))
     .join("  /  ");
+}
+
+function drawMark(ctx: CanvasRenderingContext2D, mark: string, markImage: HTMLImageElement | null, x: number, y: number, maxWidth: number, size: number, color: string, font: string, align: CanvasTextAlign = "left") {
+  if (!markImage) {
+    text(ctx, mark, x, y, size, color, font, align);
+    return;
+  }
+  const width = Math.min(maxWidth, markImage.naturalWidth * (size * 1.65 / markImage.naturalHeight));
+  const height = width * markImage.naturalHeight / markImage.naturalWidth;
+  const drawX = align === "right" ? x - width : x;
+  ctx.drawImage(markImage, drawX, y - height, width, height);
 }
 
 function drawCustomInfo(
@@ -58,6 +81,8 @@ function drawCustomInfo(
   accent: string,
   font: string,
   scale: number,
+  settings: FrameSettings,
+  markImage: HTMLImageElement | null,
 ) {
   const small = Math.max(15, 18 * scale);
   const micro = Math.max(12, 14 * scale);
@@ -65,9 +90,9 @@ function drawCustomInfo(
   if (layout === "clean") return;
   if (layout === "below") {
     const lineY = mounted.cardY + mounted.cardHeight + 30 * scale;
-    text(ctx, mark, mounted.cardX, lineY, small, foreground, font);
+    drawMark(ctx, mark, markImage, mounted.cardX, lineY, 180 * scale, small, foreground, font);
     text(ctx, meta.date, mounted.cardX + mounted.cardWidth, lineY, micro, accent, font, "right");
-    text(ctx, details(meta), mounted.cardX, lineY + 30 * scale, micro, foreground, font);
+    text(ctx, details(meta, settings), mounted.cardX, lineY + 30 * scale, micro, foreground, font);
     return;
   }
 
@@ -81,8 +106,8 @@ function drawCustomInfo(
 
   ctx.fillStyle = "rgba(0,0,0,.48)";
   ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
-  text(ctx, mark, textX, panelY + 30 * scale, small, "#ffffff", font, align);
-  text(ctx, details(meta), textX, panelY + 56 * scale, micro, "#ffffff", font, align);
+  drawMark(ctx, mark, markImage, textX, panelY + 30 * scale, 180 * scale, small, "#ffffff", font, align);
+  text(ctx, details(meta, settings), textX, panelY + 56 * scale, micro, "#ffffff", font, align);
 }
 
 function drawMountedPhoto(
@@ -126,6 +151,7 @@ export function drawFrame(
   meta: PhotoMeta,
   template: Template,
   settings: FrameSettings,
+  markImage: HTMLImageElement | null = null,
 ) {
   const [width, height] = ratios[settings.ratio];
   const scale = width / 1080;
@@ -153,14 +179,14 @@ export function drawFrame(
   const mark = cameraMark(meta.camera);
 
   if (settings.infoLayout !== "template") {
-    drawCustomInfo(ctx, mounted, mark, meta, settings.infoLayout, settings.foreground, template.accent, font, scale);
+    drawCustomInfo(ctx, mounted, mark, meta, settings.infoLayout, settings.foreground, template.accent, font, scale, settings, markImage);
     return;
   }
 
   if (isPolaroid) {
-    text(ctx, mark, mounted.cardX + mat, mounted.cardY + mounted.cardHeight - matBottom * 0.52, small, "#292924", font);
+    drawMark(ctx, mark, markImage, mounted.cardX + mat, mounted.cardY + mounted.cardHeight - matBottom * 0.52, 180 * scale, small, "#292924", font);
     text(ctx, meta.date, mounted.cardX + mounted.cardWidth - mat, mounted.cardY + mounted.cardHeight - matBottom * 0.52, micro, "#77736b", font, "right");
-    text(ctx, details(meta), mounted.cardX + mat, mounted.cardY + mounted.cardHeight - matBottom * 0.24, micro, "#77736b", font);
+    text(ctx, details(meta, settings), mounted.cardX + mat, mounted.cardY + mounted.cardHeight - matBottom * 0.24, micro, "#77736b", font);
     return;
   }
 
@@ -168,21 +194,21 @@ export function drawFrame(
     ctx.fillStyle = "rgba(0,0,0,.24)";
     ctx.fillRect(mounted.photoX, mounted.photoY, mounted.photoWidth, mounted.photoHeight);
     text(ctx, "FRAME / 01", mounted.photoX + 30 * scale, mounted.photoY + 52 * scale, micro, "#ffffff", font);
-    text(ctx, mark, mounted.photoX + 30 * scale, mounted.photoY + mounted.photoHeight - 58 * scale, 34 * scale, "#ffffff", font);
-    text(ctx, details(meta), mounted.photoX + 30 * scale, mounted.photoY + mounted.photoHeight - 28 * scale, micro, "#ffffff", font);
+    drawMark(ctx, mark, markImage, mounted.photoX + 30 * scale, mounted.photoY + mounted.photoHeight - 58 * scale, 240 * scale, 34 * scale, "#ffffff", font);
+    text(ctx, details(meta, settings), mounted.photoX + 30 * scale, mounted.photoY + mounted.photoHeight - 28 * scale, micro, "#ffffff", font);
     return;
   }
 
   if (template.layout === "stamp") {
-    text(ctx, mark, mounted.cardX, lineY, small, template.accent, font);
+    drawMark(ctx, mark, markImage, mounted.cardX, lineY, 180 * scale, small, template.accent, font);
     text(ctx, meta.date, mounted.cardX + mounted.cardWidth, lineY, micro, settings.foreground, font, "right");
-    text(ctx, details(meta), mounted.cardX, lineY + 30 * scale, micro, settings.foreground, font);
+    text(ctx, details(meta, settings), mounted.cardX, lineY + 30 * scale, micro, settings.foreground, font);
     return;
   }
 
-  text(ctx, mark, mounted.cardX, lineY, small, settings.foreground, font);
+  drawMark(ctx, mark, markImage, mounted.cardX, lineY, 180 * scale, small, settings.foreground, font);
   text(ctx, template.name.toUpperCase(), mounted.cardX + mounted.cardWidth, lineY, micro, template.accent, font, "right");
-  text(ctx, details(meta), mounted.cardX, lineY + 30 * scale, micro, settings.foreground, font);
+  text(ctx, details(meta, settings), mounted.cardX, lineY + 30 * scale, micro, settings.foreground, font);
 
   if (template.layout === "split") {
     ctx.fillStyle = template.accent;

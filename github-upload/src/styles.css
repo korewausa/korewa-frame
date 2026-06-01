@@ -50,8 +50,13 @@ canvas { display: block; max-width: 100%; max-height: 620px; box-shadow: 0 14px 
 .adjustments label { color: #868880; font-size: 10px; }.adjustments input[type="color"], select { display: block; width: 100%; height: 29px; margin-top: 6px; border: 1px solid #d8d3cb; background: transparent; }
 .range-label, .wide-label { grid-column: 1 / -1; }.range-label b { float: right; color: #666961; }.range-label input { width: 100%; accent-color: #9b604a; }
 .info-editor { padding: 0 19px 18px; }.info-editor p { margin: 0 0 12px; color: #92938c; font-size: 10px; line-height: 1.7; }
-.info-fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }.info-fields label { color: #868880; font-size: 10px; }
-.info-fields input { width: 100%; height: 30px; margin-top: 5px; padding: 0 7px; border: 1px solid #d8d3cb; background: rgba(255,255,255,.4); color: #54564f; font-size: 10px; }
+.info-fields { display: grid; gap: 7px; }.info-field { display: grid; grid-template-columns: 92px 1fr 48px; align-items: center; gap: 6px; }
+.info-field label { display: flex; align-items: center; gap: 3px; color: #868880; font-size: 10px; }.info-field label input { width: auto; height: auto; margin: 0; accent-color: #9b604a; }
+.info-field > input { width: 100%; height: 30px; padding: 0 7px; border: 1px solid #d8d3cb; background: rgba(255,255,255,.4); color: #54564f; font-size: 10px; }
+.info-field span { display: flex; gap: 3px; }.info-field button, .mark-control button, .profile-control button { border: 1px solid #d8d3cb; background: rgba(255,255,255,.4); color: #777970; font-size: 10px; }
+.info-field button { width: 22px; height: 26px; padding: 0; }
+.mark-control, .profile-control { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }.mark-control input { display: none; }.mark-control span { margin-right: auto; color: #868880; font-size: 10px; }
+.mark-control button, .profile-control button { min-height: 28px; padding: 4px 8px; }.profile-control span { display: inline-flex; gap: 2px; }
 .export-section { background: #ece7de; }.ratio-row { display: flex; gap: 6px; margin: 14px 0; }.ratio-row button { flex: 1; }
 .export-buttons { display: flex; gap: 8px; }.export-buttons button { flex: 1; border: 1px solid #cbc6bd; background: transparent; color: #686a63; font-size: 11px; }.export-buttons .primary { flex: 2; justify-content: center; border-color: #343832; color: #fff; }
 footer { display: flex; justify-content: center; gap: 15px; padding: 58px 20px 30px; color: #878981; font-size: 11px; letter-spacing: 2px; }footer small { color: #aaa8a1; font-size: 9px; }
