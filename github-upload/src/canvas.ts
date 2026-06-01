@@ -11,6 +11,8 @@ const fontFamilies = {
   sans: '"Helvetica Neue", Arial, sans-serif',
   serif: 'Georgia, "Times New Roman", serif',
   mono: '"Courier New", monospace',
+  typewriter: '"American Typewriter", "Courier New", monospace',
+  hand: '"Bradley Hand", "Segoe Print", cursive',
 };
 
 type PhotoBounds = {
@@ -35,12 +37,17 @@ function cameraMark(camera: string) {
   if (camera === "\u2014") return "KOREWA FRAME";
   if (/LEICA/i.test(camera)) return "LEICA";
   if (/FUJIFILM|X100/i.test(camera)) return "FUJIFILM";
-  if (/RICOH|GR\s?III/i.test(camera)) return "RICOH GR";
+  if (/RICOH|GR\s?III/i.test(camera)) return "RICOH";
   if (/SONY|ILCE|DSC-/i.test(camera)) return "SONY";
   if (/PENTAX|K-[0-9]/i.test(camera)) return "PENTAX";
   if (/CANON/i.test(camera)) return "CANON";
   if (/NIKON/i.test(camera)) return "NIKON";
   return camera.toUpperCase();
+}
+
+function cameraModel(camera: string) {
+  if (camera === "\u2014") return "CAMERA";
+  return camera.replace(/^RICOH\s+/i, "").replace(/^FUJIFILM\s+/i, "").replace(/^SONY\s+/i, "").replace(/^CANON\s+/i, "").replace(/^NIKON\s+/i, "");
 }
 
 function shootingDetails(meta: PhotoMeta) {
@@ -60,8 +67,8 @@ function drawCameraStrip(
   height: number,
   scale: number,
 ) {
-  const edge = Math.max(5 * scale, width * 0.004);
-  const stripHeight = Math.max(100 * scale, width * 0.082);
+  const edge = Math.max(3 * scale, (settings.frameWidth ?? 12) * scale);
+  const stripHeight = Math.max(72 * scale, width * 0.082 * ((settings.footerHeight ?? 105) / 100));
   const availableWidth = width - edge * 2;
   const imageScale = availableWidth / image.naturalWidth;
   const photoWidth = image.naturalWidth * imageScale;
@@ -77,14 +84,14 @@ function drawCameraStrip(
   const middle = cardX + cardWidth * 0.58;
   const mark = cameraMark(meta.camera);
   const date = meta.date === "\u2014" ? "" : meta.date;
-  const camera = meta.camera === "\u2014" ? "CAMERA" : meta.camera;
+  const camera = cameraModel(meta.camera);
   const lens = meta.lens === "\u2014" ? "" : meta.lens;
   const small = Math.max(16, 18 * scale);
   const medium = Math.max(18, 22 * scale);
   const brandSize = Math.max(24, 34 * scale);
   const font = fontFamilies[settings.font];
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = template.background;
   ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
   ctx.drawImage(image, photoX, photoY, photoWidth, photoHeight);
 
@@ -93,9 +100,9 @@ function drawCameraStrip(
 
   drawMark(ctx, mark, markImage, middle, footerY + stripHeight * 0.63, cardWidth * 0.16, brandSize, template.accent, font);
   ctx.fillStyle = "#30302e";
-  ctx.fillRect(middle + cardWidth * 0.12, footerY + stripHeight * 0.20, Math.max(1, 2 * scale), stripHeight * 0.60);
-  text(ctx, camera, middle + cardWidth * 0.135, footerY + stripHeight * 0.42, medium, "#30302e", font);
-  text(ctx, lens, middle + cardWidth * 0.135, footerY + stripHeight * 0.70, small, "#30302e", font);
+  ctx.fillRect(middle + cardWidth * 0.14, footerY + stripHeight * 0.20, Math.max(1, 2 * scale), stripHeight * 0.60);
+  text(ctx, camera, middle + cardWidth * 0.155, footerY + stripHeight * 0.42, medium, "#30302e", font);
+  text(ctx, lens, middle + cardWidth * 0.155, footerY + stripHeight * 0.70, small, "#30302e", font);
 }
 
 function drawPaperGrain(ctx: CanvasRenderingContext2D, width: number, height: number, seed = 17) {
@@ -124,8 +131,8 @@ function drawAnalogPrint(
   height: number,
   scale: number,
 ) {
-  const edge = Math.max(14 * scale, width * 0.012);
-  const footerHeight = Math.max(126 * scale, width * 0.105);
+  const edge = Math.max(3 * scale, (settings.frameWidth ?? 12) * scale);
+  const footerHeight = Math.max(72 * scale, width * 0.105 * ((settings.footerHeight ?? 105) / 100));
   const photoWidth = width - edge * 2;
   const photoHeight = photoWidth * image.naturalHeight / image.naturalWidth;
   const footerY = edge + photoHeight;
@@ -139,7 +146,7 @@ function drawAnalogPrint(
   const lens = meta.lens === "\u2014" ? "" : meta.lens;
   const location = meta.location === "\u2014" ? "" : meta.location;
 
-  ctx.fillStyle = "#f7f2e9";
+  ctx.fillStyle = template.background;
   ctx.fillRect(0, 0, width, height);
   drawPaperGrain(ctx, width, height);
   ctx.drawImage(image, edge, edge, photoWidth, photoHeight);
@@ -265,11 +272,11 @@ export function drawFrame(
 ) {
   let [width, height] = ratios[settings.ratio] as readonly [number, number];
   if ((template.layout === "camera-strip" || template.layout === "analog-print") && settings.infoLayout === "template") {
-    const edge = Math.max(5 * (width / 1080), width * 0.004);
+    const edge = Math.max(3 * (width / 1080), (settings.frameWidth ?? 12) * (width / 1080));
     const stripHeight = template.layout === "analog-print"
-      ? Math.max(126 * (width / 1080), width * 0.105)
-      : Math.max(100 * (width / 1080), width * 0.082);
-    const paperEdge = template.layout === "analog-print" ? Math.max(14 * (width / 1080), width * 0.012) : edge;
+      ? Math.max(72 * (width / 1080), width * 0.105 * ((settings.footerHeight ?? 105) / 100))
+      : Math.max(72 * (width / 1080), width * 0.082 * ((settings.footerHeight ?? 105) / 100));
+    const paperEdge = template.layout === "analog-print" ? Math.max(3 * (width / 1080), (settings.frameWidth ?? 12) * (width / 1080)) : edge;
     height = Math.round((width - paperEdge * 2) * image.naturalHeight / image.naturalWidth + paperEdge + stripHeight);
   }
   const scale = width / 1080;

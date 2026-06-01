@@ -1,5 +1,5 @@
 export type AspectRatio = "1:1" | "4:5" | "16:9" | "9:16";
-export type FontChoice = "sans" | "serif" | "mono";
+export type FontChoice = "sans" | "serif" | "mono" | "typewriter" | "hand";
 export type InfoLayout = "template" | "below" | "inside-left" | "inside-right" | "clean";
 export type InfoKey = keyof PhotoMeta;
 
@@ -45,6 +45,8 @@ export type FrameSettings = {
   foreground: string;
   font: FontChoice;
   margin: number;
+  frameWidth: number;
+  footerHeight: number;
   ratio: AspectRatio;
   infoLayout: InfoLayout;
   visibleInfo: InfoKey[];

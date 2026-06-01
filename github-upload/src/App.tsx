@@ -34,6 +34,8 @@ export default function App() {
     foreground: DEFAULT_TEMPLATE.foreground,
     font: DEFAULT_TEMPLATE.font,
     margin: DEFAULT_TEMPLATE.margin,
+    frameWidth: 12,
+    footerHeight: 105,
     ratio: "4:5",
     infoLayout: "template",
     visibleInfo: [...defaultInfoOrder],
@@ -44,6 +46,7 @@ export default function App() {
     () => category === "All" ? templates : templates.filter((template) => template.category === category),
     [category],
   );
+  const keepsPhotoRatio = selected.layout === "analog-print" || selected.layout === "camera-strip";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -209,9 +212,9 @@ export default function App() {
 
             <section className="control-section export-section">
               <div className="section-title"><span className="section-number">03</span><h2>保存する</h2></div>
-              <div className="ratio-row">
+              {keepsPhotoRatio ? <p className="ratio-note">元写真の比率をそのまま維持します</p> : <div className="ratio-row">
                 {ratios.map((ratio) => <button key={ratio} className={settings.ratio === ratio ? "active" : ""} onClick={() => setSettings({ ...settings, ratio })}>{ratio}</button>)}
-              </div>
+              </div>}
               <div className="export-buttons">
                 <button className="primary" onClick={() => canvasRef.current && downloadFrame(canvasRef.current, "png")}><Download size={17} /> PNGで保存</button>
                 <button onClick={() => canvasRef.current && downloadFrame(canvasRef.current, "jpeg")}>JPEG</button>
@@ -233,9 +236,11 @@ function Adjustments({ settings, onChange, markName, markInputRef, onLoadMark, o
     <div className="adjustments">
       <label>背景色<input type="color" value={settings.background} onChange={(event) => onChange({ ...settings, background: event.target.value })} /></label>
       <label>文字色<input type="color" value={settings.foreground} onChange={(event) => onChange({ ...settings, foreground: event.target.value })} /></label>
-      <label>フォント<select value={settings.font} onChange={(event) => onChange({ ...settings, font: event.target.value as FontChoice })}><option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option></select></label>
+      <label>フォント<select value={settings.font} onChange={(event) => onChange({ ...settings, font: event.target.value as FontChoice })}><option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option><option value="typewriter">Typewriter</option><option value="hand">Handwritten</option></select></label>
       <label className="wide-label">情報レイアウト<select value={settings.infoLayout} onChange={(event) => onChange({ ...settings, infoLayout: event.target.value as InfoLayout })}><option value="template">テンプレートに合わせる</option><option value="below">下部に整列</option><option value="inside-left">写真内・左下</option><option value="inside-right">写真内・右下</option><option value="clean">情報を隠す</option></select></label>
       <label className="range-label">余白 <b>{settings.margin}%</b><input type="range" min="4" max="18" value={settings.margin} onChange={(event) => onChange({ ...settings, margin: Number(event.target.value) })} /></label>
+      <label className="range-label">写真まわりの白ふち <b>{settings.frameWidth ?? 12}px</b><input type="range" min="3" max="40" value={settings.frameWidth ?? 12} onChange={(event) => onChange({ ...settings, frameWidth: Number(event.target.value) })} /></label>
+      <label className="range-label">下部の記録余白 <b>{settings.footerHeight ?? 105}%</b><input type="range" min="65" max="180" value={settings.footerHeight ?? 105} onChange={(event) => onChange({ ...settings, footerHeight: Number(event.target.value) })} /></label>
       <div className="wide-label mark-control">
         <span>オリジナル印</span>
         <input ref={markInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => onLoadMark(event.target.files?.[0])} />
