@@ -1,5 +1,6 @@
 export type AspectRatio = "1:1" | "4:5" | "16:9" | "9:16";
 export type FontChoice = "sans" | "serif" | "mono";
+export type InfoLayout = "template" | "below" | "inside-left" | "inside-right" | "clean";
 
 export type PhotoMeta = {
   camera: string;
@@ -20,7 +21,9 @@ export type TemplateCategory =
   | "Travel"
   | "Journal"
   | "Classic"
-  | "Modern";
+  | "Modern"
+  | "White"
+  | "Instant";
 
 export type Template = {
   id: string;
@@ -32,7 +35,7 @@ export type Template = {
   accent: string;
   font: FontChoice;
   margin: number;
-  layout: "bottom" | "split" | "poster" | "stamp";
+  layout: "bottom" | "split" | "poster" | "stamp" | "polaroid";
 };
 
 export type FrameSettings = {
@@ -41,4 +44,5 @@ export type FrameSettings = {
   font: FontChoice;
   margin: number;
   ratio: AspectRatio;
+  infoLayout: InfoLayout;
 };

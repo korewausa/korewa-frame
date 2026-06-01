@@ -1,6 +1,12 @@
 import type { Template } from "./types";
 
 export const templates: Template[] = [
+  { id: "pure-white", name: "Pure White", category: "White", description: "Clean white mat", background: "#ffffff", foreground: "#20211f", accent: "#a4a29c", font: "sans", margin: 10, layout: "bottom" },
+  { id: "soft-white", name: "Soft White", category: "White", description: "Warm white gallery mat", background: "#faf8f3", foreground: "#34332f", accent: "#b4aa9c", font: "serif", margin: 13, layout: "split" },
+  { id: "white-note", name: "White Note", category: "White", description: "Simple white photo note", background: "#fffdf9", foreground: "#282824", accent: "#8d8c85", font: "mono", margin: 12, layout: "stamp" },
+  { id: "instant-classic", name: "Instant Classic", category: "Instant", description: "Classic instant photo", background: "#e9e5dc", foreground: "#33312c", accent: "#a29b8e", font: "serif", margin: 10, layout: "polaroid" },
+  { id: "instant-clean", name: "Instant Clean", category: "Instant", description: "Clean instant white", background: "#f7f5f0", foreground: "#282824", accent: "#9b604a", font: "sans", margin: 12, layout: "polaroid" },
+  { id: "instant-night", name: "Instant Night", category: "Instant", description: "Dark background instant", background: "#242624", foreground: "#f4f0e8", accent: "#c6a76a", font: "mono", margin: 9, layout: "polaroid" },
   { id: "quiet-white", name: "Quiet White", category: "Minimal", description: "余白と小さな記録", background: "#f7f5f0", foreground: "#24231f", accent: "#8b877e", font: "sans", margin: 11, layout: "bottom" },
   { id: "gallery", name: "Gallery", category: "Minimal", description: "展示室のような静けさ", background: "#ebe8df", foreground: "#1d1e1b", accent: "#7c817a", font: "serif", margin: 14, layout: "split" },
   { id: "silver-grain", name: "Silver Grain", category: "Film", description: "モノクロ暗室の空気", background: "#dedbd3", foreground: "#252522", accent: "#77766f", font: "mono", margin: 9, layout: "stamp" },

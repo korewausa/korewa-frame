@@ -3,7 +3,7 @@ import { Check, ChevronDown, Download, ImagePlus, LockKeyhole, SlidersHorizontal
 import { downloadFrame, drawFrame } from "./canvas";
 import { emptyMeta, readExif } from "./exif";
 import { categories, templates } from "./templates";
-import type { AspectRatio, FontChoice, FrameSettings, PhotoMeta, Template } from "./types";
+import type { AspectRatio, FontChoice, FrameSettings, InfoLayout, PhotoMeta, Template } from "./types";
 
 const DEFAULT_TEMPLATE = templates[0];
 const ratios: AspectRatio[] = ["1:1", "4:5", "16:9", "9:16"];
@@ -19,12 +19,14 @@ export default function App() {
   const [category, setCategory] = useState("All");
   const [isDragging, setIsDragging] = useState(false);
   const [showAdjustments, setShowAdjustments] = useState(false);
+  const [showInfoEditor, setShowInfoEditor] = useState(false);
   const [settings, setSettings] = useState<FrameSettings>({
     background: DEFAULT_TEMPLATE.background,
     foreground: DEFAULT_TEMPLATE.foreground,
     font: DEFAULT_TEMPLATE.font,
     margin: DEFAULT_TEMPLATE.margin,
     ratio: "4:5",
+    infoLayout: "template",
   });
 
   const filteredTemplates = useMemo(
@@ -158,6 +160,13 @@ export default function App() {
               {showAdjustments && <Adjustments settings={settings} onChange={setSettings} />}
             </section>
 
+            <section className="control-section compact">
+              <button className="adjustments-toggle" onClick={() => setShowInfoEditor(!showInfoEditor)}>
+                <span><SlidersHorizontal size={16} /> 撮影情報を編集</span><ChevronDown size={16} className={showInfoEditor ? "opened" : ""} />
+              </button>
+              {showInfoEditor && <InfoEditor meta={meta} onChange={setMeta} />}
+            </section>
+
             <section className="control-section export-section">
               <div className="section-title"><span className="section-number">03</span><h2>保存する</h2></div>
               <div className="ratio-row">
@@ -183,7 +192,34 @@ function Adjustments({ settings, onChange }: { settings: FrameSettings; onChange
       <label>背景色<input type="color" value={settings.background} onChange={(event) => onChange({ ...settings, background: event.target.value })} /></label>
       <label>文字色<input type="color" value={settings.foreground} onChange={(event) => onChange({ ...settings, foreground: event.target.value })} /></label>
       <label>フォント<select value={settings.font} onChange={(event) => onChange({ ...settings, font: event.target.value as FontChoice })}><option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option></select></label>
+      <label className="wide-label">情報レイアウト<select value={settings.infoLayout} onChange={(event) => onChange({ ...settings, infoLayout: event.target.value as InfoLayout })}><option value="template">テンプレートに合わせる</option><option value="below">下部に整列</option><option value="inside-left">写真内・左下</option><option value="inside-right">写真内・右下</option><option value="clean">情報を隠す</option></select></label>
       <label className="range-label">余白 <b>{settings.margin}%</b><input type="range" min="4" max="18" value={settings.margin} onChange={(event) => onChange({ ...settings, margin: Number(event.target.value) })} /></label>
+    </div>
+  );
+}
+
+function InfoEditor({ meta, onChange }: { meta: PhotoMeta; onChange: (meta: PhotoMeta) => void }) {
+  const fields: { key: keyof PhotoMeta; label: string; placeholder: string }[] = [
+    { key: "camera", label: "カメラ", placeholder: "RICOH GR III" },
+    { key: "lens", label: "レンズ", placeholder: "GR LENS" },
+    { key: "aperture", label: "絞り", placeholder: "2.8" },
+    { key: "shutter", label: "シャッター", placeholder: "1/250" },
+    { key: "iso", label: "ISO", placeholder: "400" },
+    { key: "focalLength", label: "焦点距離", placeholder: "28 mm" },
+    { key: "date", label: "撮影日時", placeholder: "2026-06-02 12:00" },
+    { key: "location", label: "場所", placeholder: "Tokyo" },
+  ];
+
+  return (
+    <div className="info-editor">
+      <p>EXIFで読み込んだ内容を、書き出し前に自由に直せます。</p>
+      <div className="info-fields">
+        {fields.map((field) => (
+          <label key={field.key}>{field.label}
+            <input value={meta[field.key]} placeholder={field.placeholder} onChange={(event) => onChange({ ...meta, [field.key]: event.target.value })} />
+          </label>
+        ))}
+      </div>
     </div>
   );
 }

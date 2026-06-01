@@ -13,14 +13,16 @@ const fontFamilies = {
   mono: '"Courier New", monospace',
 };
 
-function contain(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number) {
-  const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
-  const drawWidth = image.naturalWidth * scale;
-  const drawHeight = image.naturalHeight * scale;
-  const drawX = x + (width - drawWidth) / 2;
-  const drawY = y + (height - drawHeight) / 2;
-  ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
-}
+type PhotoBounds = {
+  cardX: number;
+  cardY: number;
+  cardWidth: number;
+  cardHeight: number;
+  photoX: number;
+  photoY: number;
+  photoWidth: number;
+  photoHeight: number;
+};
 
 function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color: string, font: string, align: CanvasTextAlign = "left") {
   ctx.fillStyle = color;
@@ -29,10 +31,93 @@ function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number
   ctx.fillText(value, x, y);
 }
 
+function cameraMark(camera: string) {
+  if (camera === "\u2014") return "KOREWA FRAME";
+  if (/LEICA/i.test(camera)) return "LEICA";
+  if (/FUJIFILM|X100/i.test(camera)) return "FUJIFILM";
+  if (/RICOH|GR\s?III/i.test(camera)) return "RICOH GR";
+  if (/SONY|ILCE|DSC-/i.test(camera)) return "SONY";
+  if (/CANON/i.test(camera)) return "CANON";
+  if (/NIKON/i.test(camera)) return "NIKON";
+  return camera.toUpperCase();
+}
+
 function details(meta: PhotoMeta) {
-  return [meta.camera, meta.lens, `F${meta.aperture}`, meta.shutter, `ISO ${meta.iso}`, meta.focalLength]
-    .filter((item) => !item.includes("—"))
-    .join("  ·  ");
+  return [meta.camera, meta.lens, `F${meta.aperture}`, meta.shutter, `ISO ${meta.iso}`, meta.focalLength, meta.location]
+    .filter((item) => !item.includes("\u2014"))
+    .join("  /  ");
+}
+
+function drawCustomInfo(
+  ctx: CanvasRenderingContext2D,
+  mounted: PhotoBounds,
+  mark: string,
+  meta: PhotoMeta,
+  layout: FrameSettings["infoLayout"],
+  foreground: string,
+  accent: string,
+  font: string,
+  scale: number,
+) {
+  const small = Math.max(15, 18 * scale);
+  const micro = Math.max(12, 14 * scale);
+
+  if (layout === "clean") return;
+  if (layout === "below") {
+    const lineY = mounted.cardY + mounted.cardHeight + 30 * scale;
+    text(ctx, mark, mounted.cardX, lineY, small, foreground, font);
+    text(ctx, meta.date, mounted.cardX + mounted.cardWidth, lineY, micro, accent, font, "right");
+    text(ctx, details(meta), mounted.cardX, lineY + 30 * scale, micro, foreground, font);
+    return;
+  }
+
+  const inset = 22 * scale;
+  const panelHeight = 78 * scale;
+  const panelY = mounted.photoY + mounted.photoHeight - panelHeight - inset;
+  const panelX = mounted.photoX + inset;
+  const panelWidth = mounted.photoWidth - inset * 2;
+  const align = layout === "inside-right" ? "right" : "left";
+  const textX = layout === "inside-right" ? panelX + panelWidth - inset : panelX + inset;
+
+  ctx.fillStyle = "rgba(0,0,0,.48)";
+  ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+  text(ctx, mark, textX, panelY + 30 * scale, small, "#ffffff", font, align);
+  text(ctx, details(meta), textX, panelY + 56 * scale, micro, "#ffffff", font, align);
+}
+
+function drawMountedPhoto(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  padding: number,
+  bottomPadding: number,
+) {
+  const scale = Math.min(
+    (width - padding * 2) / image.naturalWidth,
+    (height - padding - bottomPadding) / image.naturalHeight,
+  );
+  const photoWidth = image.naturalWidth * scale;
+  const photoHeight = image.naturalHeight * scale;
+  const cardWidth = photoWidth + padding * 2;
+  const cardHeight = photoHeight + padding + bottomPadding;
+  const cardX = x + (width - cardWidth) / 2;
+  const cardY = y + (height - cardHeight) / 2;
+  const photoX = cardX + padding;
+  const photoY = cardY + padding;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(37, 34, 29, .14)";
+  ctx.shadowBlur = Math.max(12, padding * 0.9);
+  ctx.shadowOffsetY = Math.max(4, padding * 0.24);
+  ctx.fillStyle = "#fffdf9";
+  ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
+  ctx.restore();
+  ctx.drawImage(image, photoX, photoY, photoWidth, photoHeight);
+
+  return { cardX, cardY, cardWidth, cardHeight, photoX, photoY, photoWidth, photoHeight } satisfies PhotoBounds;
 }
 
 export function drawFrame(
@@ -45,13 +130,15 @@ export function drawFrame(
   const [width, height] = ratios[settings.ratio];
   const scale = width / 1080;
   const margin = width * (settings.margin / 100);
-  const bottom = template.layout === "poster" ? margin : Math.max(122 * scale, margin * 0.95);
-  const top = template.layout === "split" ? margin * 1.5 : margin;
-  const imageX = margin;
-  const imageY = top;
-  const imageWidth = width - margin * 2;
-  const imageHeight = height - top - bottom;
   const font = fontFamilies[settings.font];
+  const isPolaroid = template.layout === "polaroid";
+  const infoSpace = isPolaroid ? margin * 0.45 : Math.max(96 * scale, margin * 0.72);
+  const areaX = margin;
+  const areaY = margin;
+  const areaWidth = width - margin * 2;
+  const areaHeight = height - margin * 2 - infoSpace;
+  const mat = Math.max(16 * scale, margin * 0.15);
+  const matBottom = isPolaroid ? Math.max(92 * scale, mat * 3.4) : mat;
 
   canvas.width = width;
   canvas.height = height;
@@ -59,34 +146,47 @@ export function drawFrame(
   ctx.fillStyle = settings.background;
   ctx.fillRect(0, 0, width, height);
 
-  contain(ctx, image, imageX, imageY, imageWidth, imageHeight);
-  const lineY = imageY + imageHeight + 28 * scale;
+  const mounted = drawMountedPhoto(ctx, image, areaX, areaY, areaWidth, areaHeight, mat, matBottom);
+  const lineY = mounted.cardY + mounted.cardHeight + 30 * scale;
   const small = Math.max(15, 18 * scale);
   const micro = Math.max(12, 14 * scale);
+  const mark = cameraMark(meta.camera);
+
+  if (settings.infoLayout !== "template") {
+    drawCustomInfo(ctx, mounted, mark, meta, settings.infoLayout, settings.foreground, template.accent, font, scale);
+    return;
+  }
+
+  if (isPolaroid) {
+    text(ctx, mark, mounted.cardX + mat, mounted.cardY + mounted.cardHeight - matBottom * 0.52, small, "#292924", font);
+    text(ctx, meta.date, mounted.cardX + mounted.cardWidth - mat, mounted.cardY + mounted.cardHeight - matBottom * 0.52, micro, "#77736b", font, "right");
+    text(ctx, details(meta), mounted.cardX + mat, mounted.cardY + mounted.cardHeight - matBottom * 0.24, micro, "#77736b", font);
+    return;
+  }
 
   if (template.layout === "poster") {
-    ctx.fillStyle = "rgba(0,0,0,.26)";
-    ctx.fillRect(imageX, imageY, imageWidth, imageHeight);
-    text(ctx, "FRAME / 01", imageX + 30 * scale, imageY + 52 * scale, micro, "#ffffff", font);
-    text(ctx, meta.camera === "—" ? "YOUR PHOTOGRAPH" : meta.camera.toUpperCase(), imageX + 30 * scale, imageY + imageHeight - 60 * scale, 36 * scale, "#ffffff", font);
-    text(ctx, details(meta), imageX + 30 * scale, imageY + imageHeight - 30 * scale, micro, "#ffffff", font);
+    ctx.fillStyle = "rgba(0,0,0,.24)";
+    ctx.fillRect(mounted.photoX, mounted.photoY, mounted.photoWidth, mounted.photoHeight);
+    text(ctx, "FRAME / 01", mounted.photoX + 30 * scale, mounted.photoY + 52 * scale, micro, "#ffffff", font);
+    text(ctx, mark, mounted.photoX + 30 * scale, mounted.photoY + mounted.photoHeight - 58 * scale, 34 * scale, "#ffffff", font);
+    text(ctx, details(meta), mounted.photoX + 30 * scale, mounted.photoY + mounted.photoHeight - 28 * scale, micro, "#ffffff", font);
     return;
   }
 
   if (template.layout === "stamp") {
-    text(ctx, "KOREWA FRAME", imageX, lineY, micro, template.accent, font);
-    text(ctx, meta.date, imageX + imageWidth, lineY, micro, settings.foreground, font, "right");
-    text(ctx, details(meta), imageX, lineY + 30 * scale, micro, settings.foreground, font);
+    text(ctx, mark, mounted.cardX, lineY, small, template.accent, font);
+    text(ctx, meta.date, mounted.cardX + mounted.cardWidth, lineY, micro, settings.foreground, font, "right");
+    text(ctx, details(meta), mounted.cardX, lineY + 30 * scale, micro, settings.foreground, font);
     return;
   }
 
-  text(ctx, meta.camera === "—" ? "YOUR PHOTOGRAPH" : meta.camera, imageX, lineY, small, settings.foreground, font);
-  text(ctx, template.name.toUpperCase(), imageX + imageWidth, lineY, micro, template.accent, font, "right");
-  text(ctx, details(meta), imageX, lineY + 30 * scale, micro, settings.foreground, font);
+  text(ctx, mark, mounted.cardX, lineY, small, settings.foreground, font);
+  text(ctx, template.name.toUpperCase(), mounted.cardX + mounted.cardWidth, lineY, micro, template.accent, font, "right");
+  text(ctx, details(meta), mounted.cardX, lineY + 30 * scale, micro, settings.foreground, font);
 
   if (template.layout === "split") {
     ctx.fillStyle = template.accent;
-    ctx.fillRect(imageX, lineY + 48 * scale, Math.min(imageWidth, 110 * scale), 3 * scale);
+    ctx.fillRect(mounted.cardX, lineY + 48 * scale, Math.min(mounted.cardWidth, 110 * scale), 3 * scale);
   }
 }
 
