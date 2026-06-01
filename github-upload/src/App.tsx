@@ -1,6 +1,6 @@
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { Check, ChevronDown, Download, ImagePlus, LockKeyhole, SlidersHorizontal, Upload, X } from "lucide-react";
-import { downloadFrame, drawFrame } from "./canvas";
+import { Check, ChevronDown, Download, ImagePlus, LockKeyhole, Share2, SlidersHorizontal, Upload, X } from "lucide-react";
+import { downloadFrame, drawFrame, shareFrame } from "./canvas";
 import { emptyMeta, readExif } from "./exif";
 import { categories, templates } from "./templates";
 import type { AspectRatio, FontChoice, FrameSettings, InfoKey, InfoLayout, PhotoMeta, Template } from "./types";
@@ -216,6 +216,8 @@ export default function App() {
                 <button className="primary" onClick={() => canvasRef.current && downloadFrame(canvasRef.current, "png")}><Download size={17} /> PNGで保存</button>
                 <button onClick={() => canvasRef.current && downloadFrame(canvasRef.current, "jpeg")}>JPEG</button>
               </div>
+              <button className="share-button" onClick={() => canvasRef.current && void shareFrame(canvasRef.current)}><Share2 size={16} /> Xへ投稿する</button>
+              <p className="share-note">スマホでは画像を添付して共有。PCではJPEG保存後にXの投稿画面を開きます。</p>
             </section>
           </aside>
         </section>

@@ -60,15 +60,21 @@ function drawCameraStrip(
   height: number,
   scale: number,
 ) {
-  const stripHeight = Math.max(104 * scale, height * 0.085);
-  const imageHeight = height - stripHeight;
-  const imageScale = Math.min(width / image.naturalWidth, imageHeight / image.naturalHeight);
+  const edge = Math.max(5 * scale, width * 0.004);
+  const stripHeight = Math.max(100 * scale, width * 0.082);
+  const availableWidth = width - edge * 2;
+  const imageScale = availableWidth / image.naturalWidth;
   const photoWidth = image.naturalWidth * imageScale;
   const photoHeight = image.naturalHeight * imageScale;
-  const photoX = (width - photoWidth) / 2;
-  const photoY = (imageHeight - photoHeight) / 2;
-  const inset = Math.max(22 * scale, width * 0.018);
-  const middle = width * 0.58;
+  const cardWidth = photoWidth + edge * 2;
+  const cardHeight = photoHeight + edge * 2 + stripHeight;
+  const cardX = 0;
+  const cardY = 0;
+  const photoX = cardX + edge;
+  const photoY = cardY + edge;
+  const footerY = photoY + photoHeight + edge;
+  const inset = Math.max(18 * scale, cardWidth * 0.016);
+  const middle = cardX + cardWidth * 0.58;
   const mark = cameraMark(meta.camera);
   const date = meta.date === "\u2014" ? "" : meta.date;
   const camera = meta.camera === "\u2014" ? "CAMERA" : meta.camera;
@@ -78,18 +84,18 @@ function drawCameraStrip(
   const brandSize = Math.max(24, 34 * scale);
   const font = fontFamilies[settings.font];
 
-  ctx.fillStyle = template.background;
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
   ctx.drawImage(image, photoX, photoY, photoWidth, photoHeight);
 
-  text(ctx, date, inset, imageHeight + stripHeight * 0.45, small, template.foreground, font);
-  text(ctx, shootingDetails(meta), inset, imageHeight + stripHeight * 0.72, small, template.foreground, font);
+  text(ctx, date, cardX + inset, footerY + stripHeight * 0.43, small, "#30302e", font);
+  text(ctx, shootingDetails(meta), cardX + inset, footerY + stripHeight * 0.70, small, "#30302e", font);
 
-  drawMark(ctx, mark, markImage, middle, imageHeight + stripHeight * 0.63, width * 0.16, brandSize, template.accent, font);
-  ctx.fillStyle = template.foreground;
-  ctx.fillRect(middle + width * 0.12, imageHeight + stripHeight * 0.22, Math.max(1, 2 * scale), stripHeight * 0.58);
-  text(ctx, camera, middle + width * 0.135, imageHeight + stripHeight * 0.43, medium, template.foreground, font);
-  text(ctx, lens, middle + width * 0.135, imageHeight + stripHeight * 0.70, small, template.foreground, font);
+  drawMark(ctx, mark, markImage, middle, footerY + stripHeight * 0.63, cardWidth * 0.16, brandSize, template.accent, font);
+  ctx.fillStyle = "#30302e";
+  ctx.fillRect(middle + cardWidth * 0.12, footerY + stripHeight * 0.20, Math.max(1, 2 * scale), stripHeight * 0.60);
+  text(ctx, camera, middle + cardWidth * 0.135, footerY + stripHeight * 0.42, medium, "#30302e", font);
+  text(ctx, lens, middle + cardWidth * 0.135, footerY + stripHeight * 0.70, small, "#30302e", font);
 }
 
 function details(meta: PhotoMeta, settings: FrameSettings) {
@@ -203,7 +209,12 @@ export function drawFrame(
   settings: FrameSettings,
   markImage: HTMLImageElement | null = null,
 ) {
-  const [width, height] = ratios[settings.ratio];
+  let [width, height] = ratios[settings.ratio] as readonly [number, number];
+  if (template.layout === "camera-strip" && settings.infoLayout === "template") {
+    const edge = Math.max(5 * (width / 1080), width * 0.004);
+    const stripHeight = Math.max(100 * (width / 1080), width * 0.082);
+    height = Math.round((width - edge * 2) * image.naturalHeight / image.naturalWidth + edge * 2 + stripHeight);
+  }
   const scale = width / 1080;
   const margin = width * (settings.margin / 100);
   const font = fontFamilies[settings.font];
@@ -276,4 +287,21 @@ export function downloadFrame(canvas: HTMLCanvasElement, type: "png" | "jpeg") {
   link.download = `korewa-frame-${Date.now()}.${type === "png" ? "png" : "jpg"}`;
   link.href = canvas.toDataURL(`image/${type}`, type === "jpeg" ? 0.92 : undefined);
   link.click();
+}
+
+export async function shareFrame(canvas: HTMLCanvasElement) {
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+  if (!blob) return;
+
+  const file = new File([blob], `korewa-frame-${Date.now()}.jpg`, { type: "image/jpeg" });
+  const shareData = { files: [file], text: "#KorewaFrame #写真 #カメラ" };
+
+  if (navigator.share && navigator.canShare?.(shareData)) {
+    await navigator.share(shareData);
+    return;
+  }
+
+  downloadFrame(canvas, "jpeg");
+  const text = encodeURIComponent("Korewa Frameで作成しました。\n#KorewaFrame #写真 #カメラ");
+  window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank", "noopener,noreferrer");
 }

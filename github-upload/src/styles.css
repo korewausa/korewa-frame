@@ -59,6 +59,8 @@ canvas { display: block; max-width: 100%; max-height: 620px; box-shadow: 0 14px 
 .mark-control button, .profile-control button { min-height: 28px; padding: 4px 8px; }.profile-control span { display: inline-flex; gap: 2px; }
 .export-section { background: #ece7de; }.ratio-row { display: flex; gap: 6px; margin: 14px 0; }.ratio-row button { flex: 1; }
 .export-buttons { display: flex; gap: 8px; }.export-buttons button { flex: 1; border: 1px solid #cbc6bd; background: transparent; color: #686a63; font-size: 11px; }.export-buttons .primary { flex: 2; justify-content: center; border-color: #343832; color: #fff; }
+.share-button { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin-top: 8px; padding: 11px; border: 1px solid #343832; background: transparent; color: #343832; font-size: 11px; letter-spacing: .5px; }
+.share-note { margin: 7px 0 0; color: #999a93; font-size: 9px; line-height: 1.6; }
 footer { display: flex; justify-content: center; gap: 15px; padding: 58px 20px 30px; color: #878981; font-size: 11px; letter-spacing: 2px; }footer small { color: #aaa8a1; font-size: 9px; }
 @media (max-width: 900px) { .workspace { grid-template-columns: 1fr; }.canvas-wrap { min-height: 430px; }.controls { width: min(560px, 100%); margin: auto; } }
 @media (max-width: 560px) { .site-header { padding: 0 16px; }.header-note { display: none; }.coffee { margin-left: auto; padding: 8px 10px; font-size: 10px; }.hero { padding-top: 46px; }.workspace { width: calc(100% - 24px); }.canvas-wrap { min-height: 360px; padding: 13px; }.template-grid { max-height: 320px; } footer { flex-direction: column; align-items: center; gap: 7px; } }
