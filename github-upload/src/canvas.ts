@@ -82,13 +82,11 @@ function drawCameraStrip(
   const footerY = photoY + photoHeight + edge;
   const inset = Math.max(18 * scale, cardWidth * 0.016);
   const middle = cardX + cardWidth * 0.58;
-  const mark = cameraMark(meta.camera);
   const date = meta.date === "\u2014" ? "" : meta.date;
   const camera = cameraModel(meta.camera);
   const lens = meta.lens === "\u2014" ? "" : meta.lens;
   const small = Math.max(16, 18 * scale);
   const medium = Math.max(18, 22 * scale);
-  const brandSize = Math.max(24, 34 * scale);
   const font = fontFamilies[settings.font];
 
   ctx.fillStyle = template.background;
@@ -98,11 +96,8 @@ function drawCameraStrip(
   text(ctx, date, cardX + inset, footerY + stripHeight * 0.43, small, "#30302e", font);
   text(ctx, shootingDetails(meta), cardX + inset, footerY + stripHeight * 0.70, small, "#30302e", font);
 
-  drawMark(ctx, mark, markImage, middle, footerY + stripHeight * 0.63, cardWidth * 0.16, brandSize, template.accent, font);
-  ctx.fillStyle = "#30302e";
-  ctx.fillRect(middle + cardWidth * 0.14, footerY + stripHeight * 0.20, Math.max(1, 2 * scale), stripHeight * 0.60);
-  text(ctx, camera, middle + cardWidth * 0.155, footerY + stripHeight * 0.42, medium, "#30302e", font);
-  text(ctx, lens, middle + cardWidth * 0.155, footerY + stripHeight * 0.70, small, "#30302e", font);
+  text(ctx, camera, middle, footerY + stripHeight * 0.43, medium, template.foreground, font);
+  text(ctx, lens, middle, footerY + stripHeight * 0.70, small, template.foreground, font);
 }
 
 function drawPaperGrain(ctx: CanvasRenderingContext2D, width: number, height: number, seed = 17) {
