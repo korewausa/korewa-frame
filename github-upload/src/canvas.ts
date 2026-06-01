@@ -50,10 +50,39 @@ function cameraModel(camera: string) {
   return camera.replace(/^RICOH\s+/i, "").replace(/^FUJIFILM\s+/i, "").replace(/^SONY\s+/i, "").replace(/^CANON\s+/i, "").replace(/^NIKON\s+/i, "");
 }
 
+function companyName(camera: string) {
+  if (/RICOH|GR\s?III/i.test(camera)) return "RICOH IMAGING COMPANY, LTD.";
+  if (/FUJIFILM|X100/i.test(camera)) return "FUJIFILM";
+  if (/SONY|ILCE|DSC-/i.test(camera)) return "SONY";
+  if (/PENTAX|K-[0-9]/i.test(camera)) return "PENTAX";
+  if (/CANON/i.test(camera)) return "CANON";
+  if (/NIKON/i.test(camera)) return "NIKON";
+  if (/LEICA/i.test(camera)) return "LEICA CAMERA AG";
+  return "";
+}
+
+function tidy(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 function shootingDetails(meta: PhotoMeta) {
-  return [meta.focalLength, `ISO ${meta.iso}`, `F${meta.aperture}`, meta.shutter]
+  const focalLength = tidy(meta.focalLength).replace(/\s*mm$/i, "mm");
+  const aperture = tidy(meta.aperture).replace(/^f\/?/i, "");
+  const shutter = tidy(meta.shutter).replace(/\s*s(ec)?$/i, "s");
+  const iso = tidy(meta.iso).replace(/^ISO\s*/i, "");
+  return [focalLength, `f/${aperture}`, shutter, `ISO${iso}`]
     .filter((item) => !item.includes("\u2014"))
     .join("  ");
+}
+
+function elegantDetails(meta: PhotoMeta) {
+  const aperture = tidy(meta.aperture).replace(/^f\/?/i, "");
+  const shutter = tidy(meta.shutter).replace(/\s*s(ec)?$/i, "s");
+  const iso = tidy(meta.iso).replace(/^ISO\s*/i, "");
+  const focalLength = tidy(meta.focalLength).replace(/\s*mm$/i, "mm");
+  return [`f/${aperture}`, shutter, `ISO ${iso}`, focalLength]
+    .filter((item) => !item.includes("\u2014"))
+    .join("  \u00b7  ");
 }
 
 function drawCameraStrip(
@@ -80,24 +109,20 @@ function drawCameraStrip(
   const photoX = cardX + edge;
   const photoY = cardY + edge;
   const footerY = photoY + photoHeight + edge;
-  const inset = Math.max(18 * scale, cardWidth * 0.016);
-  const middle = cardX + cardWidth * 0.58;
-  const date = meta.date === "\u2014" ? "" : meta.date;
+  const centerX = cardWidth / 2;
   const camera = cameraModel(meta.camera);
-  const lens = meta.lens === "\u2014" ? "" : meta.lens;
+  const company = companyName(meta.camera);
+  const title = [company, camera].filter(Boolean).join("   ");
   const small = Math.max(16, 18 * scale);
   const medium = Math.max(18, 22 * scale);
-  const font = fontFamilies[settings.font];
+  const font = fontFamilies.sans;
 
   ctx.fillStyle = template.background;
   ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
   ctx.drawImage(image, photoX, photoY, photoWidth, photoHeight);
 
-  text(ctx, date, cardX + inset, footerY + stripHeight * 0.43, small, "#30302e", font);
-  text(ctx, shootingDetails(meta), cardX + inset, footerY + stripHeight * 0.70, small, "#30302e", font);
-
-  text(ctx, camera, middle, footerY + stripHeight * 0.43, medium, template.foreground, font);
-  text(ctx, lens, middle, footerY + stripHeight * 0.70, small, template.foreground, font);
+  text(ctx, title, centerX, footerY + stripHeight * 0.43, medium, template.foreground, font, "center", 700);
+  text(ctx, shootingDetails(meta), centerX, footerY + stripHeight * 0.70, small, "#777777", font, "center");
 }
 
 function drawPaperGrain(ctx: CanvasRenderingContext2D, width: number, height: number, seed = 17) {
@@ -165,24 +190,39 @@ function drawMinimalPrint(
   scale: number,
 ) {
   const edge = Math.max(12 * scale, (settings.frameWidth ?? 24) * scale);
-  const footerHeight = Math.max(170 * scale, width * 0.20 * ((settings.footerHeight ?? 105) / 100));
+  const compact = template.id === "minimal-print-compact" ? 0.72 : 1;
+  const footerHeight = Math.max(120 * scale, width * 0.20 * ((settings.footerHeight ?? 90) / 100) * compact);
   const photoWidth = width - edge * 2;
   const photoHeight = photoWidth * image.naturalHeight / image.naturalWidth;
   const footerY = edge + photoHeight;
   const centerX = width / 2;
   const font = fontFamilies.sans;
   const titleSize = Math.max(22, 28 * scale);
-  const detailSize = Math.max(18, 23 * scale);
-  const manufacturer = meta.camera === "\u2014" ? "" : meta.camera.replace(/\s+(GR|X100|ILCE|K-).*/i, "");
+  const modelSize = Math.max(22, 29 * scale);
+  const detailSize = Math.max(17, 21 * scale);
+  const signatureSize = Math.max(12, 14 * scale);
+  const manufacturer = companyName(meta.camera);
   const model = meta.camera === "\u2014" ? "" : cameraModel(meta.camera);
-  const title = [manufacturer, model].filter(Boolean).join("   ");
-  const detail = shootingDetails(meta);
+  const brand = manufacturer
+    .replace("RICOH IMAGING COMPANY, LTD.", "RICOH")
+    .replace("LEICA CAMERA AG", "Leica");
+  const detail = [meta.date === "\u2014" ? "" : meta.date, elegantDetails(meta)].filter(Boolean).join("  |  ");
+  const signature = settings.signature?.trim() ?? "";
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(image, edge, edge, photoWidth, photoHeight);
-  text(ctx, title, centerX, footerY + footerHeight * 0.52, titleSize, "#101010", font, "center", 700);
-  text(ctx, detail, centerX, footerY + footerHeight * 0.70, detailSize, "#777777", font, "center");
+
+  ctx.font = `700 ${titleSize}px ${font}`;
+  const brandWidth = ctx.measureText(brand).width;
+  ctx.font = `400 ${modelSize}px ${font}`;
+  const modelWidth = ctx.measureText(model).width;
+  const titleGap = 13 * scale;
+  const titleStart = centerX - (brandWidth + titleGap + modelWidth) / 2;
+  text(ctx, brand, titleStart, footerY + footerHeight * 0.43, titleSize, "#101010", font, "left", 700);
+  text(ctx, model, titleStart + brandWidth + titleGap, footerY + footerHeight * 0.43, modelSize, "#101010", font);
+  text(ctx, detail, centerX, footerY + footerHeight * 0.65, detailSize, "#969696", font, "center", 300);
+  if (signature) text(ctx, signature, centerX, footerY + footerHeight * 0.83, signatureSize, "#aaaaaa", font, "center");
 }
 
 function details(meta: PhotoMeta, settings: FrameSettings) {
@@ -300,7 +340,7 @@ export function drawFrame(
   if ((template.layout === "camera-strip" || template.layout === "analog-print" || template.layout === "minimal-print") && settings.infoLayout === "template") {
     const edge = Math.max(3 * (width / 1080), (settings.frameWidth ?? 12) * (width / 1080));
     const stripHeight = template.layout === "minimal-print"
-      ? Math.max(170 * (width / 1080), width * 0.20 * ((settings.footerHeight ?? 105) / 100))
+      ? Math.max(120 * (width / 1080), width * 0.20 * ((settings.footerHeight ?? 90) / 100) * (template.id === "minimal-print-compact" ? 0.72 : 1))
       : template.layout === "analog-print"
       ? Math.max(72 * (width / 1080), width * 0.105 * ((settings.footerHeight ?? 105) / 100))
       : Math.max(72 * (width / 1080), width * 0.082 * ((settings.footerHeight ?? 105) / 100));

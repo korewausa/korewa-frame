@@ -47,6 +47,7 @@ export type FrameSettings = {
   margin: number;
   frameWidth: number;
   footerHeight: number;
+  signature: string;
   ratio: AspectRatio;
   infoLayout: InfoLayout;
   visibleInfo: InfoKey[];
