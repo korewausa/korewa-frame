@@ -24,7 +24,8 @@ export type TemplateCategory =
   | "Classic"
   | "Modern"
   | "White"
-  | "Instant";
+  | "Instant"
+  | "Analog";
 
 export type Template = {
   id: string;
@@ -36,7 +37,7 @@ export type Template = {
   accent: string;
   font: FontChoice;
   margin: number;
-  layout: "bottom" | "split" | "poster" | "stamp" | "polaroid" | "camera-strip";
+  layout: "bottom" | "split" | "poster" | "stamp" | "polaroid" | "camera-strip" | "analog-print";
 };
 
 export type FrameSettings = {

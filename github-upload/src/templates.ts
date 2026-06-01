@@ -1,6 +1,9 @@
 import type { Template } from "./types";
 
 export const templates: Template[] = [
+  { id: "analog-print", name: "Analog Print", category: "Analog", description: "Warm photo paper", background: "#e9e4da", foreground: "#5c5953", accent: "#8b7968", font: "mono", margin: 4, layout: "analog-print" },
+  { id: "analog-note", name: "Analog Note", category: "Analog", description: "Quiet lab note", background: "#ded8cd", foreground: "#555149", accent: "#787168", font: "serif", margin: 4, layout: "analog-print" },
+  { id: "analog-faded", name: "Faded Print", category: "Analog", description: "Faded album paper", background: "#d8d0c1", foreground: "#6a6258", accent: "#a27862", font: "mono", margin: 4, layout: "analog-print" },
   { id: "camera-strip-white", name: "Camera Strip", category: "White", description: "Photo-first EXIF strip", background: "#ffffff", foreground: "#242424", accent: "#d9271c", font: "sans", margin: 4, layout: "camera-strip" },
   { id: "camera-strip-black", name: "Camera Strip Black", category: "Modern", description: "Dark EXIF strip", background: "#171817", foreground: "#f4f2ec", accent: "#d94b3e", font: "sans", margin: 4, layout: "camera-strip" },
   { id: "camera-strip-mono", name: "Camera Strip Mono", category: "Minimal", description: "Quiet EXIF strip", background: "#ffffff", foreground: "#292929", accent: "#292929", font: "mono", margin: 4, layout: "camera-strip" },

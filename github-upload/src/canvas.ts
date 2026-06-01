@@ -98,6 +98,60 @@ function drawCameraStrip(
   text(ctx, lens, middle + cardWidth * 0.135, footerY + stripHeight * 0.70, small, "#30302e", font);
 }
 
+function drawPaperGrain(ctx: CanvasRenderingContext2D, width: number, height: number, seed = 17) {
+  let value = seed;
+  ctx.save();
+  for (let index = 0; index < 900; index += 1) {
+    value = (value * 16807) % 2147483647;
+    const x = value % width;
+    value = (value * 16807) % 2147483647;
+    const y = value % height;
+    value = (value * 16807) % 2147483647;
+    const alpha = 0.012 + (value % 10) / 1200;
+    ctx.fillStyle = `rgba(92, 76, 58, ${alpha})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+  ctx.restore();
+}
+
+function drawAnalogPrint(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  meta: PhotoMeta,
+  settings: FrameSettings,
+  template: Template,
+  width: number,
+  height: number,
+  scale: number,
+) {
+  const edge = Math.max(14 * scale, width * 0.012);
+  const footerHeight = Math.max(126 * scale, width * 0.105);
+  const photoWidth = width - edge * 2;
+  const photoHeight = photoWidth * image.naturalHeight / image.naturalWidth;
+  const footerY = edge + photoHeight;
+  const inset = edge + Math.max(12 * scale, width * 0.012);
+  const font = fontFamilies[settings.font];
+  const small = Math.max(15, 16 * scale);
+  const micro = Math.max(12, 13 * scale);
+  const quiet = template.foreground;
+  const right = width - inset;
+  const camera = meta.camera === "\u2014" ? "" : meta.camera;
+  const lens = meta.lens === "\u2014" ? "" : meta.lens;
+  const location = meta.location === "\u2014" ? "" : meta.location;
+
+  ctx.fillStyle = "#f7f2e9";
+  ctx.fillRect(0, 0, width, height);
+  drawPaperGrain(ctx, width, height);
+  ctx.drawImage(image, edge, edge, photoWidth, photoHeight);
+
+  text(ctx, meta.date === "\u2014" ? "" : meta.date, inset, footerY + footerHeight * 0.40, small, quiet, font);
+  text(ctx, shootingDetails(meta), inset, footerY + footerHeight * 0.62, small, quiet, font);
+  text(ctx, location, inset, footerY + footerHeight * 0.82, micro, template.accent, font);
+  text(ctx, camera, right, footerY + footerHeight * 0.46, small, quiet, font, "right");
+  text(ctx, lens, right, footerY + footerHeight * 0.68, micro, quiet, font, "right");
+  text(ctx, "KOREWA FRAME / PRINT", right, footerY + footerHeight * 0.84, micro, template.accent, font, "right");
+}
+
 function details(meta: PhotoMeta, settings: FrameSettings) {
   const values = {
     camera: meta.camera,
@@ -210,10 +264,13 @@ export function drawFrame(
   markImage: HTMLImageElement | null = null,
 ) {
   let [width, height] = ratios[settings.ratio] as readonly [number, number];
-  if (template.layout === "camera-strip" && settings.infoLayout === "template") {
+  if ((template.layout === "camera-strip" || template.layout === "analog-print") && settings.infoLayout === "template") {
     const edge = Math.max(5 * (width / 1080), width * 0.004);
-    const stripHeight = Math.max(100 * (width / 1080), width * 0.082);
-    height = Math.round((width - edge * 2) * image.naturalHeight / image.naturalWidth + edge * 2 + stripHeight);
+    const stripHeight = template.layout === "analog-print"
+      ? Math.max(126 * (width / 1080), width * 0.105)
+      : Math.max(100 * (width / 1080), width * 0.082);
+    const paperEdge = template.layout === "analog-print" ? Math.max(14 * (width / 1080), width * 0.012) : edge;
+    height = Math.round((width - paperEdge * 2) * image.naturalHeight / image.naturalWidth + paperEdge + stripHeight);
   }
   const scale = width / 1080;
   const margin = width * (settings.margin / 100);
@@ -235,6 +292,11 @@ export function drawFrame(
 
   if (template.layout === "camera-strip" && settings.infoLayout === "template") {
     drawCameraStrip(ctx, image, meta, settings, template, markImage, width, height, scale);
+    return;
+  }
+
+  if (template.layout === "analog-print" && settings.infoLayout === "template") {
+    drawAnalogPrint(ctx, image, meta, settings, template, width, height, scale);
     return;
   }
 
