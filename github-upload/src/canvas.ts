@@ -26,9 +26,9 @@ type PhotoBounds = {
   photoHeight: number;
 };
 
-function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color: string, font: string, align: CanvasTextAlign = "left") {
+function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color: string, font: string, align: CanvasTextAlign = "left", weight: number | string = 400) {
   ctx.fillStyle = color;
-  ctx.font = `${size}px ${font}`;
+  ctx.font = `${weight} ${size}px ${font}`;
   ctx.textAlign = align;
   ctx.fillText(value, x, y);
 }
@@ -154,6 +154,37 @@ function drawAnalogPrint(
   text(ctx, "KOREWA FRAME / PRINT", right, footerY + footerHeight * 0.84, micro, template.accent, font, "right");
 }
 
+function drawMinimalPrint(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  meta: PhotoMeta,
+  settings: FrameSettings,
+  template: Template,
+  width: number,
+  height: number,
+  scale: number,
+) {
+  const edge = Math.max(12 * scale, (settings.frameWidth ?? 24) * scale);
+  const footerHeight = Math.max(170 * scale, width * 0.20 * ((settings.footerHeight ?? 105) / 100));
+  const photoWidth = width - edge * 2;
+  const photoHeight = photoWidth * image.naturalHeight / image.naturalWidth;
+  const footerY = edge + photoHeight;
+  const centerX = width / 2;
+  const font = fontFamilies.sans;
+  const titleSize = Math.max(22, 28 * scale);
+  const detailSize = Math.max(18, 23 * scale);
+  const manufacturer = meta.camera === "\u2014" ? "" : meta.camera.replace(/\s+(GR|X100|ILCE|K-).*/i, "");
+  const model = meta.camera === "\u2014" ? "" : cameraModel(meta.camera);
+  const title = [manufacturer, model].filter(Boolean).join("   ");
+  const detail = shootingDetails(meta);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(image, edge, edge, photoWidth, photoHeight);
+  text(ctx, title, centerX, footerY + footerHeight * 0.52, titleSize, "#101010", font, "center", 700);
+  text(ctx, detail, centerX, footerY + footerHeight * 0.70, detailSize, "#777777", font, "center");
+}
+
 function details(meta: PhotoMeta, settings: FrameSettings) {
   const values = {
     camera: meta.camera,
@@ -266,12 +297,18 @@ export function drawFrame(
   markImage: HTMLImageElement | null = null,
 ) {
   let [width, height] = ratios[settings.ratio] as readonly [number, number];
-  if ((template.layout === "camera-strip" || template.layout === "analog-print") && settings.infoLayout === "template") {
+  if ((template.layout === "camera-strip" || template.layout === "analog-print" || template.layout === "minimal-print") && settings.infoLayout === "template") {
     const edge = Math.max(3 * (width / 1080), (settings.frameWidth ?? 12) * (width / 1080));
-    const stripHeight = template.layout === "analog-print"
+    const stripHeight = template.layout === "minimal-print"
+      ? Math.max(170 * (width / 1080), width * 0.20 * ((settings.footerHeight ?? 105) / 100))
+      : template.layout === "analog-print"
       ? Math.max(72 * (width / 1080), width * 0.105 * ((settings.footerHeight ?? 105) / 100))
       : Math.max(72 * (width / 1080), width * 0.082 * ((settings.footerHeight ?? 105) / 100));
-    const paperEdge = template.layout === "analog-print" ? Math.max(3 * (width / 1080), (settings.frameWidth ?? 12) * (width / 1080)) : edge;
+    const paperEdge = template.layout === "minimal-print"
+      ? Math.max(12 * (width / 1080), (settings.frameWidth ?? 24) * (width / 1080))
+      : template.layout === "analog-print"
+        ? Math.max(3 * (width / 1080), (settings.frameWidth ?? 12) * (width / 1080))
+        : edge;
     height = Math.round((width - paperEdge * 2) * image.naturalHeight / image.naturalWidth + paperEdge + stripHeight);
   }
   const scale = width / 1080;
@@ -299,6 +336,11 @@ export function drawFrame(
 
   if (template.layout === "analog-print" && settings.infoLayout === "template") {
     drawAnalogPrint(ctx, image, meta, settings, template, width, height, scale);
+    return;
+  }
+
+  if (template.layout === "minimal-print" && settings.infoLayout === "template") {
+    drawMinimalPrint(ctx, image, meta, settings, template, width, height, scale);
     return;
   }
 

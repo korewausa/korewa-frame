@@ -46,7 +46,7 @@ export default function App() {
     () => category === "All" ? templates : templates.filter((template) => template.category === category),
     [category],
   );
-  const keepsPhotoRatio = selected.layout === "analog-print" || selected.layout === "camera-strip";
+  const keepsPhotoRatio = selected.layout === "analog-print" || selected.layout === "camera-strip" || selected.layout === "minimal-print";
 
   useEffect(() => {
     const canvas = canvasRef.current;

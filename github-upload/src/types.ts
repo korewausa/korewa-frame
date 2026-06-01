@@ -37,7 +37,7 @@ export type Template = {
   accent: string;
   font: FontChoice;
   margin: number;
-  layout: "bottom" | "split" | "poster" | "stamp" | "polaroid" | "camera-strip" | "analog-print";
+  layout: "bottom" | "split" | "poster" | "stamp" | "polaroid" | "camera-strip" | "analog-print" | "minimal-print";
 };
 
 export type FrameSettings = {
