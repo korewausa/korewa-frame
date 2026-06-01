@@ -13,13 +13,13 @@ const fontFamilies = {
   mono: '"Courier New", monospace',
 };
 
-function cover(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number) {
-  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
-  const sourceWidth = width / scale;
-  const sourceHeight = height / scale;
-  const sourceX = (image.naturalWidth - sourceWidth) / 2;
-  const sourceY = (image.naturalHeight - sourceHeight) / 2;
-  ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+function contain(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number) {
+  const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const drawX = x + (width - drawWidth) / 2;
+  const drawY = y + (height - drawHeight) / 2;
+  ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 }
 
 function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color: string, font: string, align: CanvasTextAlign = "left") {
@@ -59,7 +59,7 @@ export function drawFrame(
   ctx.fillStyle = settings.background;
   ctx.fillRect(0, 0, width, height);
 
-  cover(ctx, image, imageX, imageY, imageWidth, imageHeight);
+  contain(ctx, image, imageX, imageY, imageWidth, imageHeight);
   const lineY = imageY + imageHeight + 28 * scale;
   const small = Math.max(15, 18 * scale);
   const micro = Math.max(12, 14 * scale);
