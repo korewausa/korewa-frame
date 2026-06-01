@@ -1,6 +1,9 @@
 import type { Template } from "./types";
 
 export const templates: Template[] = [
+  { id: "camera-strip-white", name: "Camera Strip", category: "White", description: "Photo-first EXIF strip", background: "#ffffff", foreground: "#242424", accent: "#d9271c", font: "sans", margin: 4, layout: "camera-strip" },
+  { id: "camera-strip-black", name: "Camera Strip Black", category: "Modern", description: "Dark EXIF strip", background: "#171817", foreground: "#f4f2ec", accent: "#d94b3e", font: "sans", margin: 4, layout: "camera-strip" },
+  { id: "camera-strip-mono", name: "Camera Strip Mono", category: "Minimal", description: "Quiet EXIF strip", background: "#ffffff", foreground: "#292929", accent: "#292929", font: "mono", margin: 4, layout: "camera-strip" },
   { id: "pure-white", name: "Pure White", category: "White", description: "Clean white mat", background: "#ffffff", foreground: "#20211f", accent: "#a4a29c", font: "sans", margin: 10, layout: "bottom" },
   { id: "soft-white", name: "Soft White", category: "White", description: "Warm white gallery mat", background: "#faf8f3", foreground: "#34332f", accent: "#b4aa9c", font: "serif", margin: 13, layout: "split" },
   { id: "white-note", name: "White Note", category: "White", description: "Simple white photo note", background: "#fffdf9", foreground: "#282824", accent: "#8d8c85", font: "mono", margin: 12, layout: "stamp" },

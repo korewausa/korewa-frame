@@ -36,7 +36,7 @@ export type Template = {
   accent: string;
   font: FontChoice;
   margin: number;
-  layout: "bottom" | "split" | "poster" | "stamp" | "polaroid";
+  layout: "bottom" | "split" | "poster" | "stamp" | "polaroid" | "camera-strip";
 };
 
 export type FrameSettings = {

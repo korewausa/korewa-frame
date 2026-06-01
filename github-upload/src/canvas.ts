@@ -37,9 +37,59 @@ function cameraMark(camera: string) {
   if (/FUJIFILM|X100/i.test(camera)) return "FUJIFILM";
   if (/RICOH|GR\s?III/i.test(camera)) return "RICOH GR";
   if (/SONY|ILCE|DSC-/i.test(camera)) return "SONY";
+  if (/PENTAX|K-[0-9]/i.test(camera)) return "PENTAX";
   if (/CANON/i.test(camera)) return "CANON";
   if (/NIKON/i.test(camera)) return "NIKON";
   return camera.toUpperCase();
+}
+
+function shootingDetails(meta: PhotoMeta) {
+  return [meta.focalLength, `ISO ${meta.iso}`, `F${meta.aperture}`, meta.shutter]
+    .filter((item) => !item.includes("\u2014"))
+    .join("  ");
+}
+
+function drawCameraStrip(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  meta: PhotoMeta,
+  settings: FrameSettings,
+  template: Template,
+  markImage: HTMLImageElement | null,
+  width: number,
+  height: number,
+  scale: number,
+) {
+  const stripHeight = Math.max(104 * scale, height * 0.085);
+  const imageHeight = height - stripHeight;
+  const imageScale = Math.min(width / image.naturalWidth, imageHeight / image.naturalHeight);
+  const photoWidth = image.naturalWidth * imageScale;
+  const photoHeight = image.naturalHeight * imageScale;
+  const photoX = (width - photoWidth) / 2;
+  const photoY = (imageHeight - photoHeight) / 2;
+  const inset = Math.max(22 * scale, width * 0.018);
+  const middle = width * 0.58;
+  const mark = cameraMark(meta.camera);
+  const date = meta.date === "\u2014" ? "" : meta.date;
+  const camera = meta.camera === "\u2014" ? "CAMERA" : meta.camera;
+  const lens = meta.lens === "\u2014" ? "" : meta.lens;
+  const small = Math.max(16, 18 * scale);
+  const medium = Math.max(18, 22 * scale);
+  const brandSize = Math.max(24, 34 * scale);
+  const font = fontFamilies[settings.font];
+
+  ctx.fillStyle = template.background;
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(image, photoX, photoY, photoWidth, photoHeight);
+
+  text(ctx, date, inset, imageHeight + stripHeight * 0.45, small, template.foreground, font);
+  text(ctx, shootingDetails(meta), inset, imageHeight + stripHeight * 0.72, small, template.foreground, font);
+
+  drawMark(ctx, mark, markImage, middle, imageHeight + stripHeight * 0.63, width * 0.16, brandSize, template.accent, font);
+  ctx.fillStyle = template.foreground;
+  ctx.fillRect(middle + width * 0.12, imageHeight + stripHeight * 0.22, Math.max(1, 2 * scale), stripHeight * 0.58);
+  text(ctx, camera, middle + width * 0.135, imageHeight + stripHeight * 0.43, medium, template.foreground, font);
+  text(ctx, lens, middle + width * 0.135, imageHeight + stripHeight * 0.70, small, template.foreground, font);
 }
 
 function details(meta: PhotoMeta, settings: FrameSettings) {
@@ -171,6 +221,11 @@ export function drawFrame(
   const ctx = canvas.getContext("2d")!;
   ctx.fillStyle = settings.background;
   ctx.fillRect(0, 0, width, height);
+
+  if (template.layout === "camera-strip" && settings.infoLayout === "template") {
+    drawCameraStrip(ctx, image, meta, settings, template, markImage, width, height, scale);
+    return;
+  }
 
   const mounted = drawMountedPhoto(ctx, image, areaX, areaY, areaWidth, areaHeight, mat, matBottom);
   const lineY = mounted.cardY + mounted.cardHeight + 30 * scale;
